@@ -1,5 +1,11 @@
 const http = require('http');
 const app = require('./app');
+const { Server } = require("socket.io");
+
+rest_sockets = {} ; //global variable
+
+
+
 
 const normalizePort = (val) => {
   const port = parseInt(val, 10);
@@ -38,13 +44,55 @@ const errorHandler = (error) => {
 };
 
 // Variables are processed first thus this is equivalent of calling it on top.
-const server = http.createServer(app);
+// const server = http.createServer(app);
 
-server.on('error', errorHandler);
-server.on('listening', () => {
+const serverCreate = (app, port) => {
+  const server = http.createServer(app);
+  server.on('error', errorHandler);
+  server.on('listening', () => {
   const address = server.address();
   const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
   console.log('Listening on ' + bind);
 });
 
 server.listen(port);
+return server;
+}
+
+const server = serverCreate(app, port);
+
+
+const io = new Server(server, {
+    cors: {origin:"http://localhost:3000", methods: ["GET", "POST"]},
+});
+
+io.on("connection", socket => {
+  socket.on("addUser", restID => {
+        console.log("new restaurant joined ", restID);
+        socket.user = restID;
+        rest_sockets[restID] = socket;
+        console.log(rest_sockets)
+      });
+    
+      socket.on("message", message => {
+            // backwardQueue(message);
+      console.log("message came from ",socket, "#########################", message);
+    });
+
+  socket.on("disconnect", () => {
+    console.log(`user ${socket.user} is disconnected`);
+   
+    });
+  
+});
+
+// server.on('error', errorHandler);
+// server.on('listening', () => {
+//   const address = server.address();
+//   const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
+//   console.log('Listening on ' + bind);
+// });
+  
+//   server.listen(port);
+  module.exports = server
+  // exports.rest_sockets = rest_sockets;

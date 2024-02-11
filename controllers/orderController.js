@@ -1,7 +1,76 @@
 const Order = require("../db/models/orderModel")
 const jwt = require("jsonwebtoken");
+require('../index.js'); //dangerous?
 
-const { notifHandler } = require("../utils/notification")
+const { notifHandler, notifStub } = require("../utils/notification")
+
+
+//fetch Orders endpoint
+module.exports.getOrders = async (req,res) => {
+  
+  // const token = req.params.token
+  // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
+  //for testing purpose : 
+//   const decodedToken = {"id" : 100
+// };
+// const vendorId =   decodedToken.id
+  const vendorId = req.params.resId
+  
+
+  Order.find({restID: vendorId}).then((docs) => {
+      res.status(200).send(docs)
+  }).catch((error)=>{
+      res.status(400).send(
+          
+          {
+              message: "Could not fetch orders.",
+              error: error
+          }
+      )
+      }
+      
+  )
+}
+
+//status update endpoint for restaurant
+module.exports.statusUpdate = async (req,res) => {
+  
+  
+  const orderID = req.body.orderID;
+  const status = req.body.status;
+
+
+  if(status === "confirm" || status === "denied" || status === "completed"){
+ 
+      Order.updateOne({
+        "_id" : orderID
+      },{
+        $set:{
+          status:status
+        }
+
+      }).then((result)=>{
+        res.status(201).send({
+          message: "status updated",
+          result,
+        });
+      }).catch((error)=>{
+        res.status(400).send(
+          
+          {
+              message: "Could not update order status",
+              error: error
+          }
+      )
+      })
+  }
+  else{
+    res.status(400).send({
+      message: "not valid field for status (confirm/denied/completed)"
+    });
+}
+}
+
 
 
 //place order endpoint
@@ -10,42 +79,45 @@ module.exports.placeOrder = async (req, res, next) => {
 
     const token = req.body.token
 
-    // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
-
     //for testing purpose : 
     const decodedToken = {"id" : 1,
                           "userRole": "user"
                         };
     
+    // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
     const userID = decodedToken.id
     const userRole = decodedToken.userRole
+    const items = req.body.items;
+    const instructions = req.body.instructions;
+    const payementMode = req.body.payementMode;
+    const restID = req.body.restID;
+    let order;
+
     if(userRole==="vendor"){
       return res.status(400).send({
         message: "Only customers can place orders!"
       })
     }
-    
-    
-      const items = req.body.items;
-      // console.log(items)
-    
-    // console.log(typeof items)
-    
-    const instructions = req.body.instructions;
-    const payementMode = req.body.payementMode;
-    const restID = req.body.restID;
-    let order;
-    console.log(req.body)
-    order = await Order.create({
-                userID : userID,
-                items: items,
-                instruction: instructions,
-                payementMode: payementMode,
-                restID : restID,
-              });
+    const orderObj = {
+      userID : userID,
+      items: items,
+      instruction: instructions,
+      payementMode: payementMode,
+      restID : restID,
+      status : "pending"
+    };
+    order = await Order.create(orderObj);
     await order.save()
               .then((result)=>{
-                notifHandler(result._id, restID);
+                //send the notification through sockets
+                mySocket = rest_sockets[restID];
+                if(mySocket){
+                  mySocket.emit("receive_order", {orderID : result._id});
+                }
+                else{
+                  throw "Socket does not exist";
+                }
+                
                 res.status(201).send({
                           message: "Order placed.",
                           result,

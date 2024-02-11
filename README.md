@@ -4,4 +4,7 @@ Currently implemented :
 
 api/order/placeOrder
 
-use node index.js to start server
+use npm start to start server
+
+make socket with your react app using useEffect (ask shashwat for example)
+

@@ -37,6 +37,13 @@ const OrderSchema = new mongoose.Schema({
     unique: false,
   },
 
+  //status
+  status : {
+    type : String,
+    required : [[true, "status is required(pending, confirm, denied, completed)"]],
+    unique : false,
+  }
+
   
 });
 
