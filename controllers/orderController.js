@@ -38,37 +38,59 @@ module.exports.statusUpdate = async (req,res) => {
   
   const orderID = req.body.orderID;
   const status = req.body.status;
+  Order.findOne({_id: orderID}).then((result) => {
+    const custID = result['userID'];
 
 
-  if(status === "confirm" || status === "denied" || status === "completed"){
- 
-      Order.updateOne({
-        "_id" : orderID
-      },{
-        $set:{
-          status:status
-        }
-
-      }).then((result)=>{
-        res.status(201).send({
-          message: "status updated",
-          result,
-        });
-      }).catch((error)=>{
-        res.status(400).send(
-          
-          {
-              message: "Could not update order status",
-              error: error
+    
+    if(status === "confirm" || status === "denied" || status === "completed"){
+   
+        Order.updateOne({
+          "_id" : orderID
+        },{
+          $set:{
+            status:status
           }
-      )
-      })
+  
+        }).then((result)=>{
+          //send the status update to customer
+          mySocket = cust_sockets[custID];
+          if(mySocket){
+            mySocket.emit("receive_status", {orderID : orderID, status : status});
+          }
+          else{
+            throw "Socket does not exist";
+          }
+          
+          res.status(201).send({
+            message: "status updated",
+            result,
+          });
+        }).catch((error)=>{
+          res.status(400).send(
+            {
+                message: "Could not update order status",
+                error: error
+            }
+        )
+        })
+    }
+    else{
+      res.status(400).send({
+        message: "not valid field for status (confirm/denied/completed)"
+      });
   }
-  else{
-    res.status(400).send({
-      message: "not valid field for status (confirm/denied/completed)"
-    });
-}
+
+}).catch((error)=>{
+    res.status(400).send(        
+        {
+            message: "Could not determine customer id corresponding to the orderID.",
+            error: error
+        }
+    )
+    }
+    )
+    
 }
 
 
@@ -80,11 +102,11 @@ module.exports.placeOrder = async (req, res, next) => {
     const token = req.body.token
 
     //for testing purpose : 
-    const decodedToken = {"id" : 1,
+    const decodedToken = {"id" : 101,
                           "userRole": "user"
                         };
     
-    // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
+                        // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
     const userID = decodedToken.id
     const userRole = decodedToken.userRole
     const items = req.body.items;
