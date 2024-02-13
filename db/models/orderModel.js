@@ -14,7 +14,8 @@ const OrderSchema = new mongoose.Schema({
   //menu items
   items: [{
     orderid: { type: String, required: true },
-    quantity: { type: Number, required: true }
+    quantity: { type: Number, required: true },
+    price: { type: Number, required: true }
   }],
   // instructions field
   instruction: {
@@ -24,9 +25,9 @@ const OrderSchema = new mongoose.Schema({
   },
   
   // payement type field
-    payementMode: {
+    paymentMode: {
       type: String,
-      required: [true, "No payement mode specified."],
+      required: [true, "No payment mode specified."],
       unique: false,
     },
     
@@ -43,7 +44,22 @@ const OrderSchema = new mongoose.Schema({
     required : [[true, "status is required(pending, confirm, denied, completed)"]],
     unique : false,
   }
-
+  ,
+  phone: {
+    type: String,
+    required: [true, "Please provide a Phone No.!"],
+    unique: false,
+  },
+  fullName: {
+    type: String,
+    required: [true, "Please provide a name!"],
+    unique: false,
+  },
+  address: {
+    type: String,
+    required: [true, "Please provide an address!"],
+    unique: false,
+  },
   
 });
 

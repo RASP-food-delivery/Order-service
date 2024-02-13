@@ -7,17 +7,8 @@ const { notifHandler, notifStub } = require("../utils/notification")
 
 //fetch Orders endpoint
 module.exports.getOrders = async (req,res) => {
-  
-  // const token = req.params.token
-  // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
-  //for testing purpose : 
-//   const decodedToken = {"id" : 100
-// };
-// const vendorId =   decodedToken.id
   const vendorId = req.params.resId
-  
-
-  Order.find({restID: vendorId}).then((docs) => {
+  Order.find({restID: vendorId,status: { $in: ["pending", "confirm"] }}).then((docs) => {
       res.status(200).send(docs)
   }).catch((error)=>{
       res.status(400).send(
@@ -31,17 +22,42 @@ module.exports.getOrders = async (req,res) => {
       
   )
 }
+module.exports.getCompletedOrders = async (req,res) => {
+  const vendorId = req.params.resId
+  Order.find({restID: vendorId,status: { $in: ["completed"] }}).then((docs) => {
+      res.status(200).send(docs)
+  }).catch((error)=>{
+      res.status(400).send(
+          
+          {
+              message: "Could not fetch orders.",
+              error: error
+          }
+      )
+      }
+      
+  )
+}
+module.exports.orderHistory = async (req,res) => {
+  const userId = req.params.userId;
+  Order.find({userID: userId}).then((docs) => {
+      res.status(200).send(docs)
+  }).catch((error)=>{
+      res.status(400).send(
+          {
+              message: "Could not fetch orders.",
+              error: error
+          }
+      )
+      }  
+  )
+}
 
 //status update endpoint for restaurant
 module.exports.statusUpdate = async (req,res) => {
-  
-  
   const orderID = req.body.orderID;
   const status = req.body.status;
-
-
   if(status === "confirm" || status === "denied" || status === "completed"){
- 
       Order.updateOne({
         "_id" : orderID
       },{
@@ -71,29 +87,28 @@ module.exports.statusUpdate = async (req,res) => {
 }
 }
 
-
-
 //place order endpoint
 module.exports.placeOrder = async (req, res, next) => {
   try {
-
     const token = req.body.token
 
     //for testing purpose : 
-    const decodedToken = {"id" : 1,
-                          "userRole": "user"
-                        };
-    
-    // const decodedToken = jwt.decode(token, "RANDOM-TOKEN");
-    const userID = decodedToken.id
-    const userRole = decodedToken.userRole
+    // const decodedToken = {"id" : 1,
+    //                       "userRole": "user"
+    //                     };
+    const userID = token.id
+    const userRole = token.userRole
     const items = req.body.items;
-    const instructions = req.body.instructions;
-    const payementMode = req.body.payementMode;
+    const instructions = req.body.instruction;
+    const paymentMode = req.body.paymentMode;
     const restID = req.body.restID;
+    const phone = req.body.phone;
+    const fullName=req.body.fullName;
+    const address=req.body.address;
+
     let order;
 
-    if(userRole==="vendor"){
+    if(userRole!=="user"){
       return res.status(400).send({
         message: "Only customers can place orders!"
       })
@@ -102,10 +117,14 @@ module.exports.placeOrder = async (req, res, next) => {
       userID : userID,
       items: items,
       instruction: instructions,
-      payementMode: payementMode,
+      paymentMode: paymentMode,
       restID : restID,
-      status : "pending"
+      status : "pending",
+      phone:phone,
+      fullName:fullName,
+      address:address
     };
+    console.log(orderObj);
     order = await Order.create(orderObj);
     await order.save()
               .then((result)=>{
