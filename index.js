@@ -3,6 +3,8 @@ const app = require('./app');
 const { Server } = require("socket.io");
 
 rest_sockets = {} ; //global variable
+cust_sockets = {} ; //global variable
+
 
 
 
@@ -67,17 +69,23 @@ const io = new Server(server, {
 });
 
 io.on("connection", socket => {
-  socket.on("addUser", restID => {
-        console.log("new restaurant joined ", restID);
-        socket.user = restID;
-        rest_sockets[restID] = socket;
-        console.log(rest_sockets)
+  socket.on("addUser", req => {
+        if(req.role === "vendor"){
+          const restID = req.id
+          console.log("new restaurant joined ", );
+          socket.user = restID;
+          rest_sockets[restID] = socket;
+        }
+        else if(req.role === "user"){
+          const custID = req.id
+          console.log("new customer joined ", custID);
+          socket.user = custID;
+          cust_sockets[custID] = socket;
+        }
+        
       });
     
-      socket.on("message", message => {
-            // backwardQueue(message);
-      console.log("message came from ",socket, "#########################", message);
-    });
+     
 
   socket.on("disconnect", () => {
     console.log(`user ${socket.user} is disconnected`);
