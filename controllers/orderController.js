@@ -112,7 +112,7 @@ module.exports.placeOrder = async (req, res, next) => {
                 //send the notification through sockets
                 mySocket = rest_sockets[restID];
                 if(mySocket){
-                  mySocket.emit("receive_order", {orderID : result._id});
+                  mySocket.emit("receive_order", orderObj);
                 }
                 else{
                   throw "Socket does not exist";
